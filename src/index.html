@@ -1,12 +1,86 @@
 <!DOCTYPE html>
 <html>
   <head>
-    <title>starter pack</title>
+    <title>Leaflet Web Map</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link href="https://fonts.googleapis.com/css?family=Roboto" rel="stylesheet">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.2/dist/leaflet.css" integrity="sha256-sA+zWATbFveLLNqWO2gtiw3HL/lh1giY/Inf1BJ0z14=" crossorigin="" />
+    <style>
+        #map {
+            height: 600px !important;
+        }
+    </style>
   </head>
   <body>
-    <div class="logo"></div>
     <div id="main">Loading</div>
-    </body>
+    <script src="https://unpkg.com/leaflet@1.9.2/dist/leaflet.js" integrity="sha256-o9N1jGDZrf5tS+Ft4gbIK7mYMipq9lqpVJ91xHSyKhg=" crossorigin=""></script>
+    <div id="map"></div>
+    <script>
+        const map = L.map('map', 
+        {
+            center: [44.773025, -63.439022],
+            zoom: 6
+        });
+        
+        L.tileLayer('http://{s}.tile.osm.org/{z}/{x}/{y}.png').addTo(map);
+
+        async function fetchDataFromURL(url) {
+            return await fetch(url).then(res => res.json())
+        }
+
+        async function collectLinks(data, curURL) {
+          let relativeURLs = data.links.map(link => {
+            if (link.rel != 'parent' && link.rel != 'root') {
+                return link.href
+              }
+          })
+          relativeURLs = relativeURLs.filter(Boolean);
+          newURLs = relativeURLs.map(relativeURL => new URL(relativeURL, curURL).href)
+          return newURLs
+        }
+
+        async function getboxes(links) {
+          var allboxes = []
+          for (const link of links) {
+            let collectiondata = await fetchDataFromURL(link)
+            console.log(collectiondata)
+            boundingboxes = collectiondata.extent.spatial.bbox[0]
+            console.log("hey", boundingboxes)
+            allboxes.push(boundingboxes)
+          }
+          return allboxes
+        }
+
+        async function getCollections(links) {
+          let allLinks = []
+          for (const link of links) {
+            let collectiondata = await fetchDataFromURL(link)
+            let theseLinks = await collectLinks(collectiondata, link)
+            allLinks.push(...theseLinks)
+          }
+          return allLinks
+        }
+
+        async function getBoundingBoxes(url) {
+          let data = await fetchDataFromURL(url)
+          let links = await collectLinks(data, url)
+          
+          let allLinks = await getCollections(links)
+          let nextLinks = await getCollections(allLinks)
+          console.log("hey", nextLinks)
+
+          dataset = []
+          for (const link of nextLinks) {
+            data = await fetchDataFromURL(link)
+            console.log(data)
+            L.geoJSON(data).addTo(map);
+          }
+          L.geoJSON(dataset).addTo(map);
+        }
+
+        const rootURL = "https://maxar-opendata.s3.amazonaws.com/events/catalog.json"
+
+        getBoundingBoxes(rootURL)
+    </script>
+  </body>
 </html>

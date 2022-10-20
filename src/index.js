@@ -4,7 +4,11 @@ import './style.scss';
 // import $ from 'jquery';
 
 function App() {
-  return <div className="test">All the REACT are belong to us!</div>;
+  return (
+    <div>
+      <div className="test">Leaflet Web Map</div>
+    </div>
+  );
 }
 const root = createRoot(document.getElementById('main'));
 root.render(<App />);
